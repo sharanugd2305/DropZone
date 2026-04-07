@@ -1,10 +1,19 @@
 import React from 'react'
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
 
 const App = () => {
   return (
-    <h1 class="text-3xl font-bold underline">
-    Hello world!
-   </h1>
+    <>
+      <header>
+        <Show when="signed-out">
+          <SignInButton />
+          <SignUpButton />
+        </Show>
+        <Show when="signed-in">
+          <UserButton />
+        </Show>
+      </header>
+    </>
   )
 }
 
