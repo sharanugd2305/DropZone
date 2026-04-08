@@ -1,20 +1,43 @@
-import React from 'react'
-import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
+import React from "react";
+import { SignIn, SignUp } from "@clerk/clerk-react";
+import { Router, Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
 
 const App = () => {
   return (
     <>
-      <header>
-        <Show when="signed-out">
-          <SignInButton />
-          <SignUpButton />
-        </Show>
-        <Show when="signed-in">
-          <UserButton />
-        </Show>
-      </header>
-    </>
-  )
-}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard /> 
+            </ProtectedRoute>
+          }
+        />
 
-export default App
+        {/* Clerk Pages */}
+        <Route
+          path="/sign-in"
+          element={
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+              <SignIn />
+            </div>
+          }
+        />
+
+        <Route
+          path="/sign-up"
+          element={
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+              <SignUp />
+            </div>
+          }
+        />
+      </Routes>
+    </>
+  );
+};
+
+export default App;
