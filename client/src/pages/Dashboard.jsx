@@ -130,11 +130,11 @@ export default function DropzoneApp() {
             onClick={() => { setActiveNav('My Drive'); navigateTo(null); }} 
             hasChildren
           />
-          <NavItem icon={<HardDrive />} label="Computers" active={activeNav === 'Computers'} onClick={() => setActiveNav('Computers')} hasChildren />
+         
           
           <div className="my-4 border-t border-slate-100 mx-4"></div>
           
-          <NavItem icon={<Users />} label="Shared with me" active={activeNav === 'Shared'} onClick={() => setActiveNav('Shared')} />
+          
           <NavItem icon={<Clock />} label="Recent" active={activeNav === 'Recent'} onClick={() => setActiveNav('Recent')} />
           <NavItem icon={<Star />} label="Starred" active={activeNav === 'Starred'} onClick={() => setActiveNav('Starred')} />
         </nav>
