@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Download, Expand, X } from 'lucide-react';
+import { downloadFileWithName } from '../utils/downloadFile';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -84,13 +85,8 @@ export default function PdfViewer({ fileUrl, fileName, onClose }) {
     });
   };
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = fileName || 'document.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    await downloadFileWithName({ name: fileName, url: fileUrl }, 'document.pdf');
   };
 
   const handleFullscreen = () => {
