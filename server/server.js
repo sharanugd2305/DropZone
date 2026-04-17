@@ -5,6 +5,9 @@ import cookiesparser from "cookie-parser";
 import connectDB from "./config/db.js";
 import { clerkMiddleware } from "@clerk/express";
 import UserRouter from "./routes/user.js";
+import fileRouter from "./routes/file.routes.js";
+import getfileRouter from "./routes/getfile.js";
+import folderRouter from "./routes/folder.routes.js";
 
 dotenv.config();
 
@@ -25,6 +28,9 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", UserRouter);
+app.use("/api/files", fileRouter);
+app.use("/api", getfileRouter);
+app.use("/api/folders", folderRouter);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on port http://localhost:${process.env.PORT}`);
