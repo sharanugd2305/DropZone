@@ -1,7 +1,7 @@
-import fileModels from "../models.js/file.models";
+import fileModels from "../models/file.models.js";
 export const deleteFileByID = async (req,res) =>{
   try {
-    const deletedfile = await File.findByIdAndDelete(req.params.id);
+    const deletedfile = await fileModels.findByIdAndDelete(req.params.id);
     if(!deletedfile){
       return res.status(404).json({message: "file not found"});
     }
