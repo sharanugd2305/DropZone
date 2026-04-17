@@ -3,6 +3,7 @@ import { SignIn, SignUp } from "@clerk/clerk-react";
 import { Router, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import SharedItemPage from "./pages/SharedItemPage";
 
 const App = () => {
   return (
@@ -16,6 +17,8 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/dropzone/s/:id" element={<SharedItemPage />} />
 
         {/* Clerk Pages */}
         <Route
