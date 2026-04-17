@@ -1,21 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { useUser, UserButton } from "@clerk/clerk-react"; 
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth, useUser, UserButton } from "@clerk/clerk-react"; 
+import axios from 'axios';
 import { 
   Folder, File, Search, Plus, UploadCloud, 
   Share2, MoreVertical, LayoutGrid, Star, 
   Clock, Menu, X, Users, ChevronRight, Copy, Check,
-  Home, HardDrive, Cloud
+  Home, HardDrive, Cloud, Loader
 } from 'lucide-react';
 
 // Initial data structure with parentId relationships
-const initialFiles = [
-  { id: '1', name: 'Project Requirements.pdf', type: 'file', size: '2.4 MB', date: 'Oct 24, 2026', parentId: null },
-  { id: '2', name: 'Frontend Assets', type: 'folder', size: '--', date: 'Oct 23, 2026', parentId: null },
-  { id: '3', name: 'Logo_Draft.png', type: 'file', size: '1.1 MB', date: 'Oct 20, 2026', parentId: '2' }, 
-];
+const initialFiles = [];
 
 export default function DropzoneApp() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const fileInputRef = useRef(null);
 
   // State Management
@@ -31,8 +29,101 @@ export default function DropzoneApp() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // --- Navigation Logic ---
+  // Setup axios with auth token
+  const fetchFiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = await getToken();
+      const response = await axios.get('http://localhost:5000/api/files', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      const formattedFiles = response.data.map(file => ({
+        id: file._id,
+        name: file.dropzonefile.split('/').pop() || 'file',
+        type: 'file',
+        size: '--',
+        date: new Date(file.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        parentId: null,
+        url: file.dropzonefile
+      }));
+      
+      setItems(formattedFiles);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFiles();
+    }
+  }, [user, fetchFiles]);
+
+  const handleFileUpload = async (files) => {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    for (let file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const token = await getToken();
+
+        const response = await axios.post(
+          'http://localhost:5000/api/files/upload',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${token}`,
+            },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress(percentCompleted);
+            },
+          }
+        );
+
+        if (response.data.file) {
+          const newFile = {
+            id: response.data.file._id,
+            name: response.data.file.dropzonefile.split('/').pop() || file.name,
+            type: 'file',
+            size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+            date: 'Today',
+            parentId: currentFolder ? currentFolder.id : null,
+            url: response.data.file.dropzonefile
+          };
+          setItems(prevItems => [newFile, ...prevItems]);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      }
+    }
+
+    setUploading(false);
+    setUploadProgress(0);
+  };
+
+  const handleFileInputChange = (e) => {
+    const uploadedFiles = Array.from(e.target.files);
+    handleFileUpload(uploadedFiles);
+  };
+
   const openFolder = (folder) => {
     setNavigationStack([...navigationStack, folder]);
     setCurrentFolder(folder);
@@ -63,20 +154,6 @@ export default function DropzoneApp() {
     setItems([newFolder, ...items]);
     setShowNewFolderModal(false);
     setNewFolderName('Untitled folder');
-  };
-
-  // --- Upload Logic ---
-  const handleFileUpload = (e) => {
-    const uploadedFiles = Array.from(e.target.files);
-    const newItems = uploadedFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: 'file',
-      size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-      date: 'Today',
-      parentId: currentFolder ? currentFolder.id : null
-    }));
-    setItems([...newItems, ...items]);
   };
 
   // --- Share Logic ---
@@ -114,10 +191,10 @@ export default function DropzoneApp() {
             <Plus className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
             New
           </button>
-          <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center bg-indigo-600 text-white rounded-2xl py-3 px-4 shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all" title="Upload File">
-            <UploadCloud className="h-5 w-5" />
+          <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center bg-indigo-600 text-white rounded-2xl py-3 px-4 shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed" title="Upload File" disabled={uploading}>
+            {uploading ? <Loader className="h-5 w-5 animate-spin" /> : <UploadCloud className="h-5 w-5" />}
           </button>
-          <input type="file" ref={fileInputRef} hidden multiple onChange={handleFileUpload} />
+          <input type="file" ref={fileInputRef} hidden multiple onChange={handleFileInputChange} />
         </div>
 
         {/* Navigation Links */}
@@ -212,36 +289,66 @@ export default function DropzoneApp() {
         <div className={`flex-1 overflow-y-auto px-8 pb-8 transition-all ${isDragging ? 'bg-indigo-50/50 border-4 border-dashed border-indigo-300 m-6 rounded-3xl' : ''}`}
              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
              onDragLeave={() => setIsDragging(false)}
-             onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-            {visibleItems.map((item) => (
-              <div key={item.id} 
-                   onClick={() => item.type === 'folder' && openFolder(item)}
-                   className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 transition-all cursor-pointer group relative">
-                <div className="flex justify-between items-start mb-5">
-                  {item.type === 'folder' 
-                    ? <Folder className="h-12 w-12 text-slate-400 fill-slate-100 group-hover:text-indigo-500 group-hover:fill-indigo-50 transition-colors" /> 
-                    : <File className="h-12 w-12 text-indigo-500" />}
-                  <button onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setShowShareModal(true); }} 
-                          className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600">
-                    <Share2 className="h-4 w-4" />
-                  </button>
+             onDrop={(e) => {
+               e.preventDefault();
+               setIsDragging(false);
+               const droppedFiles = Array.from(e.dataTransfer.files);
+               handleFileUpload(droppedFiles);
+             }}>
+
+          {uploading && (
+            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Loader className="h-5 w-5 text-indigo-600 animate-spin" />
+                  <span className="font-semibold text-indigo-700">Uploading file...</span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-800 truncate mb-1.5">{item.name}</h3>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{item.type === 'folder' ? 'Folder' : item.size}</p>
+                <span className="text-sm font-bold text-indigo-600">{uploadProgress}%</span>
               </div>
-            ))}
-            {visibleItems.length === 0 && (
-              <div className="col-span-full py-24 text-center flex flex-col items-center">
-                <div className="bg-slate-100 p-6 rounded-full mb-4">
-                  <UploadCloud className="h-10 w-10 text-slate-400" />
+              <div className="w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="col-span-full py-24 text-center flex flex-col items-center">
+              <Loader className="h-10 w-10 text-slate-400 animate-spin mb-4" />
+              <h3 className="text-lg font-bold text-slate-700 mb-1">Loading files...</h3>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+              {visibleItems.map((item) => (
+                <div key={item.id} 
+                     onClick={() => item.type === 'folder' && openFolder(item)}
+                     className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 transition-all cursor-pointer group relative">
+                  <div className="flex justify-between items-start mb-5">
+                    {item.type === 'folder' 
+                      ? <Folder className="h-12 w-12 text-slate-400 fill-slate-100 group-hover:text-indigo-500 group-hover:fill-indigo-50 transition-colors" /> 
+                      : <File className="h-12 w-12 text-indigo-500" />}
+                    <button onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setShowShareModal(true); }} 
+                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600">
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800 truncate mb-1.5">{item.name}</h3>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{item.type === 'folder' ? 'Folder' : item.size}</p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-700 mb-1">It's empty here</h3>
-                <p className="text-slate-500 text-sm font-medium">Drag and drop files to upload</p>
-              </div>
-            )}
-          </div>
+              ))}
+              {visibleItems.length === 0 && (
+                <div className="col-span-full py-24 text-center flex flex-col items-center">
+                  <div className="bg-slate-100 p-6 rounded-full mb-4">
+                    <UploadCloud className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-700 mb-1">It's empty here</h3>
+                  <p className="text-slate-500 text-sm font-medium">Drag and drop files to upload</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
