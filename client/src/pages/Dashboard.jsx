@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth, useUser, UserButton } from "@clerk/clerk-react"; 
 import axios from 'axios';
+import PdfViewer from '../components/PdfViewer';
 import { 
   Folder, File, Search, Plus, UploadCloud, 
   Share2, MoreVertical, LayoutGrid, Star, 
@@ -29,6 +30,10 @@ export default function DropzoneApp() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [viewerFile, setViewerFile] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,18 +48,18 @@ export default function DropzoneApp() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
-      const formattedFiles = response.data.map(file => ({
-        id: file._id,
-        name: file.dropzonefile.split('/').pop() || 'file',
-        type: 'file',
-        size: '--',
-        date: new Date(file.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        parentId: null,
-        url: file.dropzonefile
+
+      const formattedItems = response.data.map(item => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        size: item.size,
+        date: item.date,
+        parentId: item.parentId,
+        url: item.url
       }));
-      
-      setItems(formattedFiles);
+
+      setItems(formattedItems);
     } catch (error) {
       console.error('Error fetching files:', error);
     } finally {
@@ -78,6 +83,7 @@ export default function DropzoneApp() {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('parentId', currentFolder ? currentFolder.id : '');
 
         const token = await getToken();
 
@@ -101,9 +107,9 @@ export default function DropzoneApp() {
         if (response.data.file) {
           const newFile = {
             id: response.data.file._id,
-            name: response.data.file.dropzonefile.split('/').pop() || file.name,
+            name: response.data.file.name,
             type: 'file',
-            size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+            size: response.data.file.size,
             date: 'Today',
             parentId: currentFolder ? currentFolder.id : null,
             url: response.data.file.dropzonefile
@@ -129,6 +135,15 @@ export default function DropzoneApp() {
     setCurrentFolder(folder);
   };
 
+  const handleItemClick = (item) => {
+    if (item.type === 'folder') {
+      openFolder(item);
+    } else if (item.type === 'file' && item.url) {
+      setViewerFile(item);
+      setShowPdfViewer(true);
+    }
+  };
+
   const navigateTo = (folder, index) => {
     if (folder === null) {
       setNavigationStack([]);
@@ -141,19 +156,37 @@ export default function DropzoneApp() {
   };
 
   // --- Create Folder Logic ---
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    const newFolder = {
-      id: Date.now().toString(),
-      name: newFolderName,
-      type: 'folder',
-      size: '--',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      parentId: currentFolder ? currentFolder.id : null
-    };
-    setItems([newFolder, ...items]);
-    setShowNewFolderModal(false);
-    setNewFolderName('Untitled folder');
+
+    try {
+      const token = await getToken();
+      const response = await axios.post('http://localhost:5000/api/folders/create', {
+        name: newFolderName,
+        parentId: currentFolder ? currentFolder.id : null
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.folder) {
+        const newFolder = {
+          id: response.data.folder._id,
+          name: response.data.folder.name,
+          type: 'folder',
+          size: '--',
+          date: new Date(response.data.folder.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          parentId: response.data.folder.parentId
+        };
+        setItems([newFolder, ...items]);
+      }
+
+      setShowNewFolderModal(false);
+      setNewFolderName('Untitled folder');
+    } catch (error) {
+      console.error('Error creating folder:', error);
+    }
   };
 
   // --- Share Logic ---
@@ -166,6 +199,30 @@ export default function DropzoneApp() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const token = await getToken();
+      const endpoint = itemToDelete.type === 'folder' 
+        ? `http://localhost:5000/api/files/folder/${itemToDelete.id}`
+        : `http://localhost:5000/api/files/delete/${itemToDelete.id}`;
+
+      await axios.delete(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Remove from local state
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
   };
 
   const visibleItems = items.filter(item => item.parentId === (currentFolder ? currentFolder.id : null));
@@ -323,16 +380,26 @@ export default function DropzoneApp() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
               {visibleItems.map((item) => (
                 <div key={item.id} 
-                     onClick={() => item.type === 'folder' && openFolder(item)}
+                     onClick={() => handleItemClick(item)}
                      className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 transition-all cursor-pointer group relative">
                   <div className="flex justify-between items-start mb-5">
                     {item.type === 'folder' 
                       ? <Folder className="h-12 w-12 text-slate-400 fill-slate-100 group-hover:text-indigo-500 group-hover:fill-indigo-50 transition-colors" /> 
                       : <File className="h-12 w-12 text-indigo-500" />}
-                    <button onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setShowShareModal(true); }} 
-                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600">
-                      <Share2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setItemToDelete(item); 
+                        setShowDeleteModal(true); 
+                      }} 
+                              className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-xl transition-all text-slate-400 hover:text-red-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setShowShareModal(true); }} 
+                              className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600">
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <h3 className="text-sm font-bold text-slate-800 truncate mb-1.5">{item.name}</h3>
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{item.type === 'folder' ? 'Folder' : item.size}</p>
@@ -374,6 +441,22 @@ export default function DropzoneApp() {
             </button>
           </div>
           <button onClick={() => setShowShareModal(false)} className="w-full mt-8 bg-slate-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors shadow-lg">Done</button>
+        </ModalWrapper>
+      )}
+      {showPdfViewer && viewerFile && (
+        <PdfViewer fileUrl={viewerFile.url} fileName={viewerFile.name} onClose={() => { setShowPdfViewer(false); setViewerFile(null); }} />
+      )}
+      {showDeleteModal && (
+        <ModalWrapper onClose={() => setShowDeleteModal(false)} title={`Delete ${itemToDelete?.type}`}>
+          <p className="text-sm text-slate-500 mb-5 font-medium">
+            Are you sure you want to delete "{itemToDelete?.name}"? 
+            {itemToDelete?.type === 'folder' && ' This will also delete all files and subfolders inside it.'}
+            This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 mt-8">
+            <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+            <button onClick={handleDeleteItem} className="px-6 py-2.5 text-sm font-bold bg-red-600 text-white hover:bg-red-700 rounded-xl shadow-md shadow-red-200 transition-all">Delete</button>
+          </div>
         </ModalWrapper>
       )}
     </div>
