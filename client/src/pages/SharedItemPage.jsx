@@ -137,51 +137,61 @@ export default function SharedItemPage() {
 
   if (rootItem.type === "file") {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {isImageFile(rootItem) ? (
-                <ImageIcon className="h-8 w-8 text-emerald-500 shrink-0" />
-              ) : (
-                <File className="h-8 w-8 text-indigo-500 shrink-0" />
-              )}
-              <div className="min-w-0">
-                <h1 className="text-lg font-black text-slate-800 truncate">{rootItem.name}</h1>
-                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Shared file</p>
+      <>
+        <div className="min-h-screen bg-slate-50 px-4 py-10">
+          <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {isImageFile(rootItem) ? (
+                  <ImageIcon className="h-8 w-8 text-emerald-500 shrink-0" />
+                ) : (
+                  <File className="h-8 w-8 text-indigo-500 shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <h1 className="text-lg font-black text-slate-800 truncate">{rootItem.name}</h1>
+                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Shared file</p>
+                </div>
               </div>
+              <Cloud className="h-6 w-6 text-indigo-500 shrink-0" />
             </div>
-            <Cloud className="h-6 w-6 text-indigo-500 shrink-0" />
-          </div>
 
-          <div className="p-6 flex flex-wrap gap-3 border-b border-slate-100">
-            <button
-              onClick={() => setViewerFile(rootItem)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open file
-            </button>
-            <button
-              onClick={() => handleDownload(rootItem)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-100 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </button>
-          </div>
-
-          {isImageFile(rootItem) && (
-            <div className="p-6 bg-slate-100">
-              <img
-                src={rootItem.url}
-                alt={rootItem.name}
-                className="max-h-[70vh] w-full object-contain rounded-2xl bg-slate-900"
-              />
+            <div className="p-6 flex flex-wrap gap-3 border-b border-slate-100">
+              <button
+                onClick={() => setViewerFile(rootItem)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open file
+              </button>
+              <button
+                onClick={() => handleDownload(rootItem)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-100 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </button>
             </div>
-          )}
+
+            {isImageFile(rootItem) && (
+              <div className="p-6 bg-slate-100">
+                <img
+                  src={rootItem.url}
+                  alt={rootItem.name}
+                  className="max-h-[70vh] w-full object-contain rounded-2xl bg-slate-900"
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+        {viewerFile && (
+          <FileViewerModal
+            file={viewerFile}
+            onClose={() => {
+              setViewerFile(null);
+            }}
+          />
+        )}
+      </>
     );
   }
 
