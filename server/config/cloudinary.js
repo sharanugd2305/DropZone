@@ -18,7 +18,7 @@ const uploadOnCloudinary = async (localFilePath) => {
     // Upload file to Cloudinary
 
     const uploadResult = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "image",
+      resource_type: "auto",
     });
 
     // remove local file after upload
