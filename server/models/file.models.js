@@ -5,6 +5,7 @@ const fileSchema = new mongoose.Schema({
     parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Folder", default: null },
     name: { type: String, required: true },
     size: { type: String },
+    starred: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
 });
 export default mongoose.model("File", fileSchema); 
