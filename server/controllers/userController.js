@@ -4,7 +4,7 @@ import User from "../models/user.model.js";
 export const createUser = async (req, res) => {
   try {
     const { userId } = getAuth(req);
-    console.log("userId:", userId);
+    
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -13,7 +13,7 @@ export const createUser = async (req, res) => {
     let user = await User.findById(userId);
 
     if (user) {
-      return res.status(200).json(user); // ✅ fix
+      return res.status(200).json(user); 
     }
 
     const clerkUser = await clerkClient.users.getUser(userId);
