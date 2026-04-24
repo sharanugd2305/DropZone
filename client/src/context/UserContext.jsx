@@ -7,7 +7,7 @@ export const UserDataContext = createContext();
 export const useUserData = () => useContext(UserDataContext);
 
 function UserContext({ children }) {
-    const serverUrl = "http://localhost:5000";
+    const serverUrl = import.meta.env.VITE_BACKEND_URL;
 
     const { getToken, isSignedIn } = useAuth();
     const { user } = useUser();
