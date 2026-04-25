@@ -30,10 +30,14 @@ import {
   Download,
 } from "lucide-react";
 import Logo from "../../public/Logo.png";
+import UserContext from "../context/UserContext";
+import { useUserData } from "../context/UserContext";
 
 const initialFiles = [];
 
 export default function DropzoneApp() {
+
+  const serverUrl = import.meta.env.VITE_BACKEND_URL;
   const { user } = useUser();
   const { getToken } = useAuth();
   const fileInputRef = useRef(null);
@@ -68,8 +72,10 @@ export default function DropzoneApp() {
     try {
       setLoading(true);
       const token = await getToken();
-      const response = await axios.get("http://localhost:5000/api/files", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await axios.get(`${serverUrl}/api/files`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const formattedItems = response.data.map((item) => ({
@@ -121,13 +127,22 @@ export default function DropzoneApp() {
         formData.append("parentId", targetParentId || "");
         const token = await getToken();
 
-        const response = await axios.post("http://localhost:5000/api/files/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
+        const response = await axios.post(
+          `${serverUrl}/api/files/upload`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+            },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total,
+              );
+              setUploadProgress(percentCompleted);
+            },
           },
-        });
+        );
 
         if (response.data.file) {
           const newFile = {
@@ -209,9 +224,17 @@ export default function DropzoneApp() {
     if (!newFolderName.trim()) return;
     try {
       const token = await getToken();
-      const response = await axios.post("http://localhost:5000/api/folders/create", 
-        { name: newFolderName, parentId: currentFolder ? currentFolder.id : null },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await axios.post(
+        `${serverUrl}/api/folders/create`,
+        {
+          name: newFolderName,
+          parentId: currentFolder ? currentFolder.id : null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
       if (response.data.folder) {
         setItems((prevItems) => [{
@@ -247,10 +270,18 @@ export default function DropzoneApp() {
     if (!itemToDelete) return;
     try {
       const token = await getToken();
-      const endpoint = itemToDelete.type === "folder"
-        ? `http://localhost:5000/api/files/folder/${itemToDelete.id}`
-        : `http://localhost:5000/api/files/delete/${itemToDelete.id}`;
-      await axios.delete(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      const endpoint =
+        itemToDelete.type === "folder"
+          ? `${serverUrl}/api/files/folder/${itemToDelete.id}`
+          : `${serverUrl}/api/files/delete/${itemToDelete.id}`;
+
+      await axios.delete(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Remove from local state
       setItems(items.filter((item) => item.id !== itemToDelete.id));
       setShowDeleteModal(false);
       setItemToDelete(null);
@@ -262,7 +293,8 @@ export default function DropzoneApp() {
   const handleToggleStar = async (item) => {
     try {
       const token = await getToken();
-      const response = await axios.patch(`http://localhost:5000/api/files/star/${item.type}/${item.id}`,
+      const response = await axios.patch(
+        `${serverUrl}/api/files/star/${item.type}/${item.id}`,
         { starred: !item.starred },
         { headers: { Authorization: `Bearer ${token}` } }
       );
