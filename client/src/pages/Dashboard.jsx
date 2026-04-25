@@ -47,7 +47,7 @@ export default function DropzoneApp() {
   const [currentFolder, setCurrentFolder] = useState(null);
   const [navigationStack, setNavigationStack] = useState([]);
   const [activeNav, setActiveNav] = useState("My Drive");
-  const [viewMode, setViewMode] = useState("grid"); // New: View mode state
+  const [viewMode, setViewMode] = useState("grid");
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -66,8 +66,11 @@ export default function DropzoneApp() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // NEW: State for the mobile floating action button menu
+  const [showFabMenu, setShowFabMenu] = useState(false);
 
-  // --- Logic (Unchanged) ---
+  // --- Logic ---
   const fetchFiles = useCallback(async () => {
     try {
       setLoading(true);
@@ -96,7 +99,7 @@ export default function DropzoneApp() {
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, serverUrl]);
 
   useEffect(() => {
     if (user) fetchFiles();
@@ -169,6 +172,7 @@ export default function DropzoneApp() {
   };
 
   const handleFileInputChange = (e) => handleFileUpload(Array.from(e.target.files));
+  
   const openFolder = (folder) => {
     setNavigationStack([...navigationStack, folder]);
     setCurrentFolder(folder);
@@ -281,7 +285,6 @@ export default function DropzoneApp() {
         },
       });
 
-      // Remove from local state
       setItems(items.filter((item) => item.id !== itemToDelete.id));
       setShowDeleteModal(false);
       setItemToDelete(null);
@@ -382,7 +385,7 @@ export default function DropzoneApp() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 z-10 sticky top-0">
           <div className="flex items-center flex-1">
             <button className="md:hidden mr-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full" onClick={() => setIsSidebarOpen(true)}><Menu /></button>
@@ -392,7 +395,6 @@ export default function DropzoneApp() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-6">
-            {/* --- View Mode Toggle Button --- */}
             <button 
               onClick={() => setViewMode(prev => prev === "grid" ? "list" : "grid")}
               className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 flex items-center gap-2"
@@ -453,7 +455,6 @@ export default function DropzoneApp() {
                 <StatsCard label="All Files" val={items.filter(i => i.type === 'file').length} />
                 <StatsCard label="Storage" val={usedStorageLabel} />
               </div>
-              {/* Home stays as Grid for Quick Access design */}
               <section>
                 <h2 className="text-lg font-black text-slate-800 mb-4">Quick Folders</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
@@ -470,7 +471,6 @@ export default function DropzoneApp() {
           ) : (
             <>
               {viewMode === "grid" ? (
-                /* GRID VIEW */
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
                   {filteredVisibleItems.map((item) => (
                     <FileCard 
@@ -485,7 +485,6 @@ export default function DropzoneApp() {
                   ))}
                 </div>
               ) : (
-                /* LIST VIEW */
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                   <table className="w-full text-left">
                     <thead>
@@ -534,9 +533,52 @@ export default function DropzoneApp() {
             </>
           )}
         </div>
+
+        {/* --- Multi-Option Mobile Floating Action Button (FAB) --- */}
+        
+        {/* Semi-transparent backdrop when menu is open */}
+        {showFabMenu && (
+          <div 
+            className="fixed inset-0 bg-slate-900/20 z-40 md:hidden backdrop-blur-sm transition-opacity"
+            onClick={() => setShowFabMenu(false)}
+          />
+        )}
+
+        {/* Pop-up Menu Options */}
+        <div className={`fixed bottom-28 right-6 flex flex-col gap-4 z-50 md:hidden transition-all duration-300 origin-bottom ${showFabMenu ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 translate-y-8 pointer-events-none'}`}>
+          <button 
+            onClick={() => { setShowFabMenu(false); setShowNewFolderModal(true); }}
+            className="flex items-center gap-3 bg-white pr-4 pl-3 py-3 rounded-2xl shadow-xl hover:bg-slate-50 transition-colors"
+          >
+            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+              <Folder className="h-5 w-5 fill-indigo-100" />
+            </div>
+            <span className="text-sm font-bold text-slate-700">Folder</span>
+          </button>
+          
+          <button 
+            onClick={() => { setShowFabMenu(false); fileInputRef.current.click(); }}
+            className="flex items-center gap-3 bg-white pr-4 pl-3 py-3 rounded-2xl shadow-xl hover:bg-slate-50 transition-colors"
+          >
+            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+              <UploadCloud className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-bold text-slate-700">Upload</span>
+          </button>
+        </div>
+
+        {/* Main Action Button */}
+        <button
+          className={`fixed bottom-8 right-6 w-14 h-14 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300 z-50 md:hidden active:scale-95 ${showFabMenu ? 'bg-slate-800 rotate-[135deg]' : 'bg-indigo-600 hover:bg-indigo-700 rotate-0'}`}
+          onClick={() => setShowFabMenu(!showFabMenu)}
+          title="Add new"
+        >
+          <Plus className="h-7 w-7" />
+        </button>
+
       </main>
 
-      {/* Modals (Unchanged) */}
+      {/* Modals */}
       {showNewFolderModal && (
         <ModalWrapper onClose={() => setShowNewFolderModal(false)} title="New folder">
           <input autoFocus value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()} className="w-full border-2 border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none" />
