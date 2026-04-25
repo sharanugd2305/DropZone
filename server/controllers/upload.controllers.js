@@ -1,6 +1,5 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
 import fileModels from "../models/file.models.js";
-import fs from "fs/promises";
 
 export const uploadfile = async (req, res) => {
   try {
@@ -16,14 +15,13 @@ export const uploadfile = async (req, res) => {
       });
 
       if (existingFile) {
-        await fs.unlink(req.file.path).catch(() => {});
         return res.status(409).json({ error: "A file with the same name already exists in this folder" });
       }
     }
 
     // If a file is uploaded, upload it to Cloudinary and use the returned secure URL
     if (req.file) {
-      const result = await uploadOnCloudinary(req.file.path);
+      const result = await uploadOnCloudinary(req.file.buffer);
       if (!result || !result.secure_url) {
         throw new Error("Cloudinary upload failed");
       }
