@@ -30,6 +30,7 @@ function isImageFile(item) {
 export default function SharedItemPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const serverUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -44,7 +45,7 @@ export default function SharedItemPage() {
       try {
         setLoading(true);
         setError("");
-        const response = await axios.get(`http://localhost:5000/api/share/${id}`);
+        const response = await axios.get(`${serverUrl}/api/share/${id}`);
 
         setRootItem(response.data.item);
         setAllItems(response.data.items || []);
@@ -152,7 +153,7 @@ export default function SharedItemPage() {
                   <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Shared file</p>
                 </div>
               </div>
-              <Cloud className="h-6 w-6 text-indigo-500 shrink-0" />
+              <Cloud onClick={() => navigate("/")} className="h-6 w-6 text-indigo-500 shrink-0 cursor-pointer" />
             </div>
 
             <div className="p-6 flex flex-wrap gap-3 border-b border-slate-100">
