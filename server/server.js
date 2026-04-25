@@ -12,11 +12,12 @@ import folderRouter from "./routes/folder.routes.js";
 dotenv.config();
 
 connectDB(); // Connect to MongoDB
+const PORT = process.env.PORT; 
 const app = express();
 app.use(clerkMiddleware());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   }),
 );
@@ -32,6 +33,6 @@ app.use("/api/files", fileRouter);
 app.use("/api", getfileRouter);
 app.use("/api/folders", folderRouter);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server is running on port http://localhost:${process.env.PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port http://localhost:${PORT}`);
 });
