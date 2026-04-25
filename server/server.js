@@ -11,19 +11,29 @@ import folderRouter from "./routes/folder.routes.js";
 
 dotenv.config();
 
-connectDB(); // Connect to MongoDB
-const PORT = process.env.PORT; 
 const app = express();
-app.use(clerkMiddleware());
+
+//  connect DB (safe for serverless)
+connectDB();
+
+//  IMPORTANT: CORS first
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-  }),
+  })
 );
+
+//  Handle preflight explicitly (VERY IMPORTANT)
+app.options("*", cors());
+
+//  Middlewares
 app.use(express.json());
 app.use(cookiesparser());
+app.use(clerkMiddleware());
 
+//  Routes
 app.get("/", (req, res) => {
   res.send("Server is running!");
 });
@@ -33,6 +43,10 @@ app.use("/api/files", fileRouter);
 app.use("/api", getfileRouter);
 app.use("/api/folders", folderRouter);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port http://localhost:${PORT}`);
-});
+//  REMOVE THIS (breaks Vercel)
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port http://localhost:${PORT}`);
+// });
+
+//  EXPORT instead
+export default app;
