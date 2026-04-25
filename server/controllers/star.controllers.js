@@ -18,7 +18,7 @@ export const toggleStarredItem = async (req, res) => {
     const updatedItem = await Model.findOneAndUpdate(
       { _id: id, ownerId: req.userId },
       { starred },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updatedItem) {
