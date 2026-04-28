@@ -1,12 +1,29 @@
 import mongoose from "mongoose";
 // Function to connect to MongoDB
-const connectDB = async() =>{
-       try{
-        await mongoose.connect(process.env.MONGODB_URL) // Connect to MongoDB using URL from environment variables
-        console.log("MongoDB connected successfully"); // Log success message
-       }catch(error){
-        console.log("MongoDB connection failed", error);
+let connectionPromise;
+
+const connectDB = async () => {
+       if (mongoose.connection.readyState === 1) {
+              return mongoose.connection;
        }
-}
+
+       if (!process.env.MONGODB_URL) {
+              throw new Error("MONGODB_URL is not set");
+       }
+
+       if (!connectionPromise) {
+              connectionPromise = mongoose.connect(process.env.MONGODB_URL);
+       }
+
+       try {
+              await connectionPromise;
+              console.log("MongoDB connected successfully");
+              return mongoose.connection;
+       } catch (error) {
+              connectionPromise = undefined;
+              console.log("MongoDB connection failed", error);
+              throw error;
+       }
+};
 
 export default connectDB;
