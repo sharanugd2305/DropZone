@@ -11,11 +11,11 @@ import folderRouter from "./routes/folder.routes.js";
 
 dotenv.config();
 
+await connectDB();
+
 const app = express();
 
 //  connect DB (safe for serverless)
-connectDB();
-
 //  IMPORTANT: CORS first
 app.use(
   cors({
