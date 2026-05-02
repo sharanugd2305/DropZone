@@ -80,8 +80,8 @@ https://drop-zone-sandy.vercel.app/
 - Backend deployed on **Vercel**
 ---
 
-## 👨‍💻 Team Members
-## 👨‍💻 Team Members
+## 👨‍💻 Team DropZone
+
 
 | Name | GitHub | LinkedIn |
 |------|--------|----------|
