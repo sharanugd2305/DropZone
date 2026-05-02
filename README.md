@@ -81,12 +81,12 @@ https://drop-zone-sandy.vercel.app/
 ---
 
 ## 👨‍💻 Team Members
-- **Sharanu Dodamani**  
-  https://github.com/sharanugd2305
+## 👨‍💻 Team Members
 
-- **Shakthi Vel K**  
-  https://github.com/Shakthivelk24  
-
+| Name | GitHub | LinkedIn |
+|------|--------|----------|
+| Sharanu Dodamani | [GitHub](https://github.com/sharanugd2305) | [LinkedIn](https://www.linkedin.com/in/sharanu-dodamani-4002773b6/) |
+| Shakthivel K | [GitHub](https://github.com/Shakthivelk24) | [LinkedIn](https://www.linkedin.com/in/shakthi-vel-k-b35484343/) |
 ---
 
 ## 📈 Future Enhancements
